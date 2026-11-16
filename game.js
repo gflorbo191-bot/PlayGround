@@ -304,7 +304,8 @@ sand.rotation.x=-Math.PI/2; sand.position.set(LAKEX,0.03,LAKEZ); sand.receiveSha
     if (Math.abs(x)<6 && z>-6 && z<170) continue;
     if (Math.hypot(x-LAKEX,z-LAKEZ) < LAKER+6) continue;
     if (Math.hypot(x,z)<16) continue;
-    if (x>-22&&x<-6 && z>-16&&z<2) continue;
+    if (x>-31 && x<-13 && z>-11 && z<3) continue; // rumah + beranda
+    if (x>-23 && x<-6 && z>-16 && z<2) continue;
     const s = R(.7,1.5), ry = R(0,6.28);
     dummy.rotation.set(0,ry,0); dummy.scale.setScalar(s);
     dummy.position.set(x, 1.1*s, z); dummy.updateMatrix(); trunk.setMatrixAt(placed, dummy.matrix);
@@ -339,24 +340,178 @@ const GAR = {x:0, z:0, w:11, d:9, h:3.4};
   bulb.position.set(0,3.15,0); g.add(bulb);
 }
 
-// ---------- rumah ----------
+// ---------- rumah + interior (dapur / kamar tidur / kamar mandi) ----------
+const HOUSE = { x:-22, z:-4, w:14, d:10, h:3 };
+const houseSpots = [];
 {
-  const g = new THREE.Group(); g.position.set(-14,0,-7); g.rotation.y = Math.PI/2; world.add(g);
-  const w=9, d=7.5, h=3;
-  const body = box(w,h,d,M.houseWood); body.position.y=h/2; g.add(body);
-  colliders.push({x0:-14-w/2-.4, x1:-14+w/2+.4, z0:-7-d/2-.4, z1:-7+d/2+.4});
-  const roof = box(w+1,.2,d+1.6,M.roof); roof.position.y=h+.55; roof.rotation.z=.14; g.add(roof);
-  const door = box(1.1,2.2,.12,M.dark); door.position.set(-2.2,1.1,d/2+.05); g.add(door);
-  [[-2.2,1.9],[1.6,1.9]].forEach(p=>{
-    const fr=box(1.3,1.2,.06,M.dark); fr.position.set(p[0],p[1],d/2+.03); g.add(fr);
-    const wn=box(1.1,1,.1,M.glass); wn.position.set(p[0],p[1],d/2+.08); g.add(wn);
-  });
-  for (let i=0;i<12;i++){
-    const log = cyl(.09,.09,1.1,M.bark); log.rotation.z=Math.PI/2;
-    log.position.set(3.4, .1+Math.floor(i/4)*.19, -2.6 + Math.floor(i/4)*.02 + (i%4)*.2);
-    g.add(log);
+  const H = HOUSE;
+  const g = new THREE.Group(); g.position.set(H.x,0,H.z); world.add(g);
+  const t=.24, half=H.w/2, dep=H.d/2, h=H.h;
+  const cw = (lx,lz,w,d)=> colliders.push({x0:H.x+lx-w/2, x1:H.x+lx+w/2, z0:H.z+lz-d/2, z1:H.z+lz+d/2});
+
+  // lantai & pondasi
+  const floorMat = new THREE.MeshStandardMaterial({ color:0x8b6742, roughness:.82 });
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(H.w-.3,H.d-.3), floorMat);
+  floor.rotation.x=-Math.PI/2; floor.position.y=.04; floor.receiveShadow=true; g.add(floor);
+  const base = box(H.w+.4,.24,H.d+.4,M.concrete); base.position.y=.02; g.add(base);
+
+  // dinding luar — depan punya pintu
+  const wallH=h, yy=wallH/2;
+  const wall=(lx,lz,w,d)=>{
+    const b=box(w,wallH,d,M.houseWood); b.position.set(lx,yy,lz); g.add(b); cw(lx,lz,w,d);
+  };
+  wall(0,-dep,H.w+.3,t);                       // belakang
+  wall(-half,0,t,H.d); wall(half,0,t,H.d);     // samping
+  // depan: dua sisi + ambang pintu
+  wall(-(half*.5+.55), dep, half-1.1, t);
+  wall( (half*.5+.55), dep, half-1.1, t);
+  const lintel=box(2.2,.8,t,M.houseWood); lintel.position.set(0,2.6,dep); g.add(lintel);
+
+  // sekat dalam
+  const inner=(lx,lz,w,d)=>{ const b=box(w,wallH,d,M.grayWood); b.position.set(lx,yy,lz); g.add(b); cw(lx,lz,w,d); };
+  // kamar tidur kiri-belakang (x -7..-2.5, z -5..0)
+  inner(-2.5,-3.3,t,3.4);  inner(-2.5,-.2,t,.4);
+  inner(-4.75,0,4.5,t);    // dinding depan kamar
+  // kamar mandi kanan-belakang (x 2.5..7, z -5..0)
+  inner(2.5,-3.3,t,3.4);   inner(2.5,-.2,t,.4);
+  inner(4.75,0,4.5,t);
+  // pintu sekat (kecil, dekoratif)
+  const mkDoor=(lx,lz,rot)=>{
+    const d=box(.85,2.05,.06,new THREE.MeshStandardMaterial({color:0x6b4b2e,roughness:.8}));
+    d.position.set(lx,1.05,lz); d.rotation.y=rot; d.rotation.z=rot?0:-0; g.add(d);
+  };
+  mkDoor(-2.5,-1.05,0); mkDoor(2.5,-1.05,0);
+
+  // atap & cerobong
+  const roofL = box(7.6,.16,H.d+1.4,M.roof); roofL.position.set(-3.7,h+.5,0); roofL.rotation.z=.16; g.add(roofL);
+  const roofR = box(7.6,.16,H.d+1.4,M.roof); roofR.position.set( 3.7,h+.5,0); roofR.rotation.z=-.16; g.add(roofR);
+  const ridge = box(H.w+.4,.12,.5,M.dark); ridge.position.y=h+.9; g.add(ridge);
+  const chim = box(.7,1.8,.7,M.brick); chim.position.set(5.2,h+1.1,-2); g.add(chim);
+
+  // jendela luar (kaca + kusen)
+  const mkWindow=(lx,lz,ry)=>{
+    const grp=new THREE.Group(); grp.position.set(lx,1.85,lz); grp.rotation.y=ry; g.add(grp);
+    const fr=box(1.5,1.2,.1,M.dark); grp.add(fr);
+    const gl=box(1.34,1.04,.08,M.glass); gl.position.z=.03; grp.add(gl);
+    const bar=box(.06,1.04,.1,M.dark); grp.add(bar);
+  };
+  mkWindow(-4.9,dep,0); mkWindow(4.9,dep,0);
+  mkWindow(-half,-2.2,Math.PI/2); mkWindow(half,-2.2,Math.PI/2);
+
+  // beranda
+  const porch = box(3.4,.12,1.8,M.grayWood); porch.position.set(0,.06,dep+.9); g.add(porch);
+  const step = box(2.4,.1,.7,M.grayWood); step.position.set(0,.03,dep+1.9); g.add(step);
+  const lampPost = cyl(.05,.05,2.6,M.dark); lampPost.position.set(1.8,.55,dep+1.3); g.add(lampPost);
+  const porchLamp = new THREE.Mesh(new THREE.SphereGeometry(.12,10,8),
+    new THREE.MeshStandardMaterial({color:0xffe0a8, emissive:0xffb94d, emissiveIntensity:2.4}));
+  porchLamp.position.set(1.8,1.9,dep+1.3); g.add(porchLamp);
+  const pl = new THREE.PointLight(0xffc77a, 16, 11, 2); pl.position.set(1.8,1.9,dep+1.3); g.add(pl);
+
+  // ---------- perabot: DAPUR (tengah belakang) ----------
+  const counterMat = new THREE.MeshStandardMaterial({color:0xc9c0a8, roughness:.6});
+  const counter = box(4.4,.9,.72,counterMat); counter.position.set(-.4,.45,-4.5); g.add(counter); cw(-.4,-4.5,4.4,.72);
+  const ctop = box(4.5,.07,.78,M.dark); ctop.position.set(-.4,.93,-4.5); g.add(ctop);
+  // kompor
+  for (let i=0;i<4;i++){
+    const burner=cyl(.13,.13,.03,M.dark,14);
+    burner.position.set(-1.7+(i%2)*.55,.975,-4.62+Math.floor(i/2)*.26); g.add(burner);
   }
-  const chim = box(.7,1.6,.7,M.brick); chim.position.set(2.5,h+1.1,-1); g.add(chim);
+  const oven = box(.62,.5,.08,M.dark); oven.position.set(-1.7,.36,-4.16); g.add(oven);
+  // wastafel
+  const sink = box(.7,.1,.5,new THREE.MeshStandardMaterial({color:0xb9c3c6, roughness:.35, metalness:.5}));
+  sink.position.set(.95,.96,-4.5); g.add(sink);
+  const tap = cyl(.03,.03,.3,M.chrome); tap.position.set(.95,1.1,-4.7); tap.rotation.x=.35; g.add(tap);
+  // kulkas
+  const fridge = box(.9,1.85,.8,new THREE.MeshStandardMaterial({color:0xe4e6e2, roughness:.45, metalness:.15}));
+  fridge.position.set(2.1,.93,-4.35); g.add(fridge); cw(2.1,-4.35,.9,.8);
+  const fh = box(.05,.55,.05,M.dark); fh.position.set(2.1,1.15,-3.94); g.add(fh);
+  // rak piring
+  const shelf = box(1.8,.08,.26,M.grayWood); shelf.position.set(-.7,1.6,-4.72); g.add(shelf);
+  for (let i=0;i<5;i++){ const p=cyl(.09,.07,.04,i%2?M.rim:M.chrome,12); p.rotation.x=Math.PI/2; p.position.set(-1.4+i*.35,1.66,-4.7); g.add(p); }
+  const kettle = cyl(.09,.11,.18,M.chrome,12); kettle.position.set(-2.3,1.06,-4.4); g.add(kettle);
+
+  // ---------- perabot: KAMAR TIDUR (kiri belakang) ----------
+  const bedFrame = box(1.5,.24,2.5,new THREE.MeshStandardMaterial({color:0x5b3d22, roughness:.85}));
+  bedFrame.position.set(-4.8,.25,-3.4); g.add(bedFrame); cw(-4.8,-3.4,1.5,2.5);
+  const mattress = box(1.42,.2,2.42,new THREE.MeshStandardMaterial({color:0xe8dfc9, roughness:.95}));
+  mattress.position.set(-4.8,.47,-3.4); g.add(mattress);
+  const blanket = box(1.44,.12,1.5,new THREE.MeshStandardMaterial({color:0x7a3b32, roughness:1}));
+  blanket.position.set(-4.8,.55,-3.05); g.add(blanket);
+  const pillow = box(.62,.14,.4,new THREE.MeshStandardMaterial({color:0xf2ece0, roughness:1}));
+  pillow.position.set(-4.8,.6,-4.35); g.add(pillow);
+  const wardrobe = box(.9,2,.7,M.grayWood); wardrobe.position.set(-6.55,1,-1.1); g.add(wardrobe); cw(-6.55,-1.1,.9,.7);
+  const nightstand = box(.5,.5,.45,M.grayWood); nightstand.position.set(-3.55,.25,-4.35); g.add(nightstand);
+  const nLamp = new THREE.Mesh(new THREE.ConeGeometry(.16,.22,10),
+    new THREE.MeshStandardMaterial({color:0xffe6b0, emissive:0xffc66a, emissiveIntensity:1.6}));
+  nLamp.position.set(-3.55,.66,-4.35); g.add(nLamp);
+  const bedLight = new THREE.PointLight(0xffbd6b, 7, 7, 2); bedLight.position.set(-4.8,1.7,-3.4); g.add(bedLight);
+  // karpet
+  const rug = box(2.2,.02,1.5,new THREE.MeshStandardMaterial({color:0x8a5e3a, roughness:1}));
+  rug.position.set(-4.7,.055,-.4); g.add(rug);
+
+  // ---------- perabot: KAMAR MANDI (kanan belakang) ----------
+  const tileMat = new THREE.MeshStandardMaterial({color:0xbfd0d2, roughness:.35, metalness:.05});
+  const bath = box(1.9,.55,.9,new THREE.MeshStandardMaterial({color:0xe9eef0, roughness:.25, metalness:.1}));
+  bath.position.set(5.4,.3,-4.3); g.add(bath); cw(5.4,-4.3,1.9,.9);
+  const water = box(1.72,.05,.72,M.water); water.position.set(5.4,.5,-4.3); g.add(water);
+  const tap2 = cyl(.03,.03,.26,M.chrome); tap2.position.set(6.2,.62,-4.55); tap2.rotation.z=.5; g.add(tap2);
+  const toilet = box(.55,.42,.7,new THREE.MeshStandardMaterial({color:0xf0f2f2, roughness:.3}));
+  toilet.position.set(3.3,.21,-4.45); g.add(toilet); cw(3.3,-4.45,.55,.7);
+  const tank = box(.55,.6,.22,new THREE.MeshStandardMaterial({color:0xf0f2f2, roughness:.3}));
+  tank.position.set(3.3,.6,-4.75); g.add(tank);
+  const basin = cyl(.24,.2,.14,new THREE.MeshStandardMaterial({color:0xf0f2f2, roughness:.3}),16);
+  basin.position.set(3.3,.85,-3.3); g.add(basin);
+  const mirror = box(.6,.8,.04,M.glass); mirror.position.set(3.3,1.6,-3.18); g.add(mirror);
+  const bathLight = new THREE.PointLight(0xbfe4ff, 8, 8, 2); bathLight.position.set(4.9,2.4,-3.5); g.add(bathLight);
+  const tiles = new THREE.Mesh(new THREE.PlaneGeometry(4.3,4.7), tileMat);
+  tiles.rotation.x=-Math.PI/2; tiles.position.set(4.75,.045,-2.5); g.add(tiles);
+  const towel = box(.5,.7,.04,new THREE.MeshStandardMaterial({color:0x9ab3a8, roughness:1}));
+  towel.position.set(6.55,1.35,-3.2); g.add(towel);
+
+  // ---------- perabot: RUANG TAMU / MAKAN (depan) ----------
+  const table = box(1.8,.09,1,new THREE.MeshStandardMaterial({color:0x7a5634, roughness:.8}));
+  table.position.set(2.5,.78,2.3); g.add(table); cw(2.5,2.3,1.8,1);
+  for (const s of [[-1,-1],[1,-1],[-1,1],[1,1]]){
+    const leg=box(.09,.76,.09,M.dark); leg.position.set(2.5+s[0]*.75,.38,2.3+s[1]*.38); g.add(leg);
+  }
+  for (const xy of [[1.1,2.3],[3.9,2.3],[2.5,1.3],[2.5,3.3]]){
+    const chair=box(.42,.08,.42,new THREE.MeshStandardMaterial({color:0x6b4a2c, roughness:.85}));
+    chair.position.set(xy[0],.48,xy[1]); g.add(chair);
+    const back=box(.42,.5,.07,M.grayWood);
+    back.position.set(xy[0],.75,xy[1]+(xy[1]>2.3?.2:-.2)); g.add(back);
+  }
+  const sofa = box(2.4,.55,.85,new THREE.MeshStandardMaterial({color:0x4d5f45, roughness:1}));
+  sofa.position.set(-4.6,.42,3.3); sofa.rotation.y=Math.PI/2; g.add(sofa); cw(-4.6,3.3,.85,2.4);
+  const sofaBack = box(.25,.55,2.4,new THREE.MeshStandardMaterial({color:0x41523b, roughness:1}));
+  sofaBack.position.set(-5.0,.75,3.3); g.add(sofaBack);
+  const rug2 = box(3,.02,2.4,new THREE.MeshStandardMaterial({color:0x74443a, roughness:1}));
+  rug2.position.set(-1.6,.055,2.6); g.add(rug2);
+  // rak TV + radio
+  const tvStand = box(1.3,.45,.4,M.grayWood); tvStand.position.set(-6.4,.26,2.6); tvStand.rotation.y=Math.PI/2; g.add(tvStand);
+  const tv = box(.75,.5,.08,M.dark); tv.position.set(-6.5,.8,2.6); tv.rotation.y=Math.PI/2; g.add(tv);
+  const radio = box(.34,.18,.16,new THREE.MeshStandardMaterial({color:0x6d4b2c, roughness:.7}));
+  radio.position.set(-1.6,.9,-4.4); g.add(radio);
+
+  // lampu ruang tamu + dapur
+  const mainLamp = new THREE.PointLight(0xffd9a0, 42, 26, 1.8);
+  mainLamp.position.set(0,2.6,1.4); g.add(mainLamp);
+  const kitLamp = new THREE.PointLight(0xffe6c0, 24, 16, 1.8);
+  kitLamp.position.set(0,2.6,-3.2); g.add(kitLamp);
+  for (const lp of [[0,1.4],[-1.4,-3.2]]){
+    const shade = new THREE.Mesh(new THREE.ConeGeometry(.28,.22,12),
+      new THREE.MeshStandardMaterial({color:0xfff0c8, emissive:0xffd88a, emissiveIntensity:1.8, side:THREE.DoubleSide}));
+    shade.position.set(lp[0],2.72,lp[1]); shade.rotation.x=Math.PI; g.add(shade);
+    const cord = cyl(.01,.01,.5,M.dark); cord.position.set(lp[0],2.95,lp[1]); g.add(cord);
+  }
+
+  // titik interaksi rumah
+  const spot = (id,lx,lz,r,label)=> houseSpots.push({id,x:H.x+lx,z:H.z+lz,r,label});
+  spot('bed',   -4.8,-3.4,1.9,'Tidur & simpan');
+  spot('shower', 5.4,-4.3,1.8,'Mandi (hilangkan mabuk)');
+  spot('stove', -1.7,-4.5,1.6,'Masak kopi');
+  spot('fridge', 2.1,-4.35,1.6,'Buka kulkas');
+  spot('toilet', 3.3,-4.45,1.5,'Siram toilet');
+  spot('radio', -1.6,-4.4,1.4,'Nyalakan radio');
 }
 
 // ---------- KAUPPA ----------

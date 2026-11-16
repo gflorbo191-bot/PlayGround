@@ -3,146 +3,224 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Suvi Kesä — Perajin Mobil Musim Panas</title>
+<title>Suvi Kesä — A Summer Car Story</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   html,body { width:100%; height:100%; overflow:hidden; background:#0b0e12; font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif; }
+  body { touch-action:none; }
   #app { position:fixed; inset:0; }
   canvas { display:block; }
 
-  /* ---------- Loading / start screen ---------- */
-  #startScreen {
-    position:fixed; inset:0; z-index:50;
+  /* ================= MAIN MENU ================= */
+  #mainMenu {
+    position:fixed; inset:0; z-index:60; color:#e8e4d8; overflow:hidden;
     background:
-      radial-gradient(ellipse at 30% 20%, rgba(255,214,140,.14), transparent 55%),
-      linear-gradient(180deg,#1a232c 0%,#0e141a 70%,#090d11 100%);
-    display:flex; align-items:center; justify-content:center;
-    transition:opacity .6s; cursor:pointer;
+      radial-gradient(ellipse at 70% 10%, rgba(255,190,90,.12), transparent 55%),
+      radial-gradient(ellipse at 20% 90%, rgba(60,110,70,.18), transparent 60%),
+      linear-gradient(160deg,#141d17 0%,#0d1410 45%,#070a08 100%);
+    display:flex; flex-direction:column; justify-content:center; align-items:center;
   }
-  #startScreen.hide { opacity:0; pointer-events:none; }
-  .startCard { text-align:center; color:#e8e4d8; max-width:640px; padding:32px; }
-  .startCard h1 {
-    font-size:64px; letter-spacing:2px; font-weight:900;
-    color:#f3ead2; text-shadow:0 3px 0 #6b4a1e, 0 6px 24px rgba(0,0,0,.6);
+  #mainMenu::after {
+    content:""; position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(180deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
   }
-  .startCard h1 span { color:#d9a542; }
-  .startCard .sub { margin-top:6px; font-size:15px; color:#b9c4c9; letter-spacing:4px; text-transform:uppercase; }
-  .startCard .desc { margin:22px 0; font-size:14px; line-height:1.7; color:#9fb0ba; }
-  .startCard .btn {
-    display:inline-block; margin-top:10px; padding:14px 46px; font-size:19px; font-weight:bold;
-    color:#1c1508; background:linear-gradient(180deg,#ffd873,#d9a542);
-    border-radius:8px; border:1px solid #8a6524; box-shadow:0 4px 18px rgba(217,165,66,.35);
+  .mmLogo { text-align:center; margin-bottom:38px; }
+  .mmLogo h1 {
+    font-family:Georgia,"Times New Roman",serif; font-size:82px; letter-spacing:6px;
+    color:#f4ecd6; text-shadow:0 4px 0 #4d3a1a, 0 10px 40px rgba(0,0,0,.8);
+    font-weight:900;
   }
-  #startScreen:hover .btn { filter:brightness(1.08); }
-  .startCard .keys { margin-top:26px; font-size:12.5px; color:#7f9099; line-height:1.9; }
-  .startCard .keys b { color:#cfd9de; background:#1d2a33; border:1px solid #3a4a54; border-radius:4px; padding:1px 7px; margin:0 2px; font-size:11.5px; }
-  #loadingBar { width:280px; height:8px; margin:18px auto 0; background:#141c22; border-radius:4px; overflow:hidden; border:1px solid #2a3742; }
-  #loadingFill { height:100%; width:0%; background:linear-gradient(90deg,#d9a542,#ffd873); transition:width .3s; }
+  .mmLogo h1 span { color:#d9a542; }
+  .mmLogo .line { height:2px; width:420px; margin:14px auto 10px;
+    background:linear-gradient(90deg,transparent,#d9a542,transparent); }
+  .mmLogo p { font-size:12.5px; letter-spacing:6px; color:#8fa08a; text-transform:uppercase; }
+  .mmMenu { display:flex; flex-direction:column; gap:10px; width:340px; z-index:2; }
+  .mmItem {
+    background:linear-gradient(90deg, rgba(30,44,33,.6), rgba(30,44,33,0));
+    border:1px solid rgba(255,255,255,.08); border-left:3px solid rgba(217,165,66,.25);
+    color:#d8d4c4; font-size:18px; letter-spacing:3px; text-align:left;
+    padding:13px 22px; border-radius:4px; cursor:pointer; font-family:inherit;
+    transition:all .14s; text-transform:uppercase;
+  }
+  .mmItem:hover, .mmItem:focus {
+    background:linear-gradient(90deg, rgba(217,165,66,.22), rgba(30,44,33,.2));
+    border-left-color:#ffd873; color:#fff3d8; transform:translateX(4px);
+  }
+  .mmItem:disabled { opacity:.32; cursor:not-allowed; transform:none; }
+  .mmItem small { float:right; font-size:11px; letter-spacing:1px; color:#8f9a8b; margin-top:4px; }
+  .mmOffice { margin-top:34px; text-align:center; font-size:11px; letter-spacing:2px; color:#6b7a69; line-height:2; z-index:2; }
+  .mmOffice b { color:#a8b6a2; }
+  .mmVersion { position:absolute; right:26px; bottom:20px; font-size:11px; letter-spacing:2px; color:#7d8a79; text-align:right; }
+  .mmHint { position:absolute; left:0; right:0; bottom:22px; text-align:center; font-size:11px; color:#5f6c5c; letter-spacing:2px; }
 
-  /* ---------- HUD ---------- */
+  /* credits */
+  #creditsScreen {
+    position:fixed; inset:0; z-index:70; display:none; align-items:center; justify-content:center;
+    background:rgba(5,8,6,.94); color:#e8e4d8; backdrop-filter:blur(6px);
+  }
+  #creditsScreen.show { display:flex; }
+  .credCard { max-width:520px; padding:34px; border:1px solid rgba(217,165,66,.35);
+    background:linear-gradient(180deg,rgba(20,30,22,.9),rgba(10,14,11,.95)); border-radius:10px; text-align:center; }
+  .credCard h2 { font-family:Georgia,serif; letter-spacing:4px; font-size:34px; color:#f4ecd6; }
+  .credCard h2 span { color:#d9a542; }
+  .credCard .sub { color:#8fa08a; letter-spacing:3px; font-size:11px; margin:6px 0 22px; text-transform:uppercase; }
+  .credCard .big { font-size:20px; color:#ffd873; letter-spacing:2px; margin:6px 0; }
+  .credCard p { font-size:13px; color:#a8b3a0; line-height:2; }
+  .credCard .dev { display:inline-block; margin:14px 0 20px; font-size:12px; letter-spacing:3px;
+    color:#e0b25a; border:1px dashed rgba(224,178,90,.5); padding:7px 16px; border-radius:4px; }
+  .credBtn { margin-top:8px; padding:12px 30px; background:linear-gradient(180deg,#ffd873,#d9a542);
+    color:#241b06; border:none; border-radius:6px; font-weight:bold; font-size:15px; cursor:pointer; font-family:inherit; }
+
+  /* ================= LOADING ================= */
+  #loadScreen {
+    position:fixed; inset:0; z-index:80; display:none; flex-direction:column;
+    align-items:center; justify-content:center; color:#e8e4d8;
+    background:radial-gradient(ellipse at center,#111a13 0%,#060906 75%);
+  }
+  #loadScreen.show { display:flex; }
+  #loadScreen .loadTitle { font-family:Georgia,serif; font-size:34px; letter-spacing:8px; color:#f4ecd6; }
+  #loadScreen .loadTitle span { color:#d9a542; }
+  #loadScreen .loadSub { margin-top:6px; font-size:10.5px; letter-spacing:4px; color:#7e8c7a; text-transform:uppercase; }
+  #loadBarWrap { width:min(420px,74vw); height:10px; margin-top:30px; background:#141c16;
+    border:1px solid #2f3b2e; border-radius:5px; overflow:hidden; }
+  #loadFill { height:100%; width:0%; background:linear-gradient(90deg,#a3762d,#ffd873,#a3762d); transition:width .18s linear; }
+  #loadPct { margin-top:10px; font-size:12px; letter-spacing:3px; color:#a8b3a0; }
+  #loadTip { margin-top:16px; font-size:12px; color:#7f8d7b; max-width:80vw; text-align:center; min-height:20px; }
+  #loadScreen .loadFooter { position:absolute; bottom:20px; font-size:10.5px; letter-spacing:2px; color:#5a6757; }
+
+  /* ================= HUD ================= */
   #hud { position:fixed; inset:0; z-index:20; pointer-events:none; opacity:0; transition:opacity .5s; }
   #hud.show { opacity:1; }
-  #crosshair {
-    position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px;
-  }
-  #crosshair::before, #crosshair::after {
-    content:""; position:absolute; background:rgba(255,255,255,.85);
-    box-shadow:0 0 3px rgba(0,0,0,.8);
-  }
+  #crosshair { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; }
+  #crosshair::before, #crosshair::after { content:""; position:absolute; background:rgba(255,255,255,.85); box-shadow:0 0 3px rgba(0,0,0,.8); }
   #crosshair::before { left:8px; top:0; width:2px; height:18px; }
   #crosshair::after  { top:8px; left:0; height:2px; width:18px; }
   #crosshair.hit::before, #crosshair.hit::after { background:#ffd873; }
 
-  #hint {
-    position:absolute; left:50%; top:58%; transform:translateX(-50%);
+  #hint { position:absolute; left:50%; top:58%; transform:translateX(-50%);
     background:rgba(10,14,17,.78); border:1px solid rgba(255,255,255,.14);
     color:#f3ead2; font-size:15px; padding:8px 18px; border-radius:6px;
-    backdrop-filter:blur(3px); display:none; white-space:nowrap;
-  }
+    backdrop-filter:blur(3px); display:none; white-space:nowrap; }
   #hint b { color:#ffd873; }
   #hint .sub { display:block; font-size:11.5px; color:#9fb0ba; margin-top:2px; }
 
-  #handItem {
-    position:absolute; right:26px; top:24px;
+  #handItem { position:absolute; right:26px; top:74px;
     background:rgba(10,14,17,.75); border:1px solid rgba(255,255,255,.14);
-    color:#e8e4d8; font-size:13px; padding:8px 14px; border-radius:6px; display:none;
-  }
+    color:#e8e4d8; font-size:13px; padding:8px 14px; border-radius:6px; display:none; }
   #handItem b { color:#ffd873; }
 
-  #tasks {
-    position:absolute; left:22px; top:22px; width:230px;
+  #tasks { position:absolute; left:22px; top:22px; width:232px;
     background:rgba(10,14,17,.66); border:1px solid rgba(255,255,255,.12);
-    border-radius:8px; padding:10px 12px; color:#cfd9de; font-size:12.5px;
-    backdrop-filter:blur(3px);
-  }
-  #tasks h4 { font-size:11px; letter-spacing:2px; color:#8fa0aa; text-transform:uppercase; margin-bottom:7px; border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:5px; }
+    border-radius:8px; padding:10px 12px; color:#cfd9de; font-size:12.5px; backdrop-filter:blur(3px); }
+  #tasks h4 { font-size:11px; letter-spacing:2px; color:#8fa0aa; text-transform:uppercase; margin-bottom:7px;
+    border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:5px; }
   #tasks .task { padding:2.5px 0; display:flex; gap:8px; align-items:center; }
-  #tasks .task .box {
-    width:11px; height:11px; border:1.5px solid #8fa0aa; border-radius:2px; flex:none; position:relative;
-  }
+  #tasks .task .box { width:11px; height:11px; border:1.5px solid #8fa0aa; border-radius:2px; flex:none; position:relative; }
   #tasks .task.done { color:#7ec97e; }
   #tasks .task.done .box { border-color:#7ec97e; background:rgba(126,201,126,.15); }
-  #tasks .task.done .box::after {
-    content:""; position:absolute; left:2.5px; top:-1px; width:4px; height:8px;
-    border:solid #7ec97e; border-width:0 2px 2px 0; transform:rotate(42deg);
-  }
+  #tasks .task.done .box::after { content:""; position:absolute; left:2.5px; top:-1px; width:4px; height:8px;
+    border:solid #7ec97e; border-width:0 2px 2px 0; transform:rotate(42deg); }
 
-  #dash {
-    position:absolute; right:20px; bottom:16px; width:240px; height:150px; display:none;
-  }
+  #dash { position:absolute; right:20px; bottom:16px; width:240px; height:150px; display:none; }
   #gaugeCanvas { width:240px; height:150px; }
 
-  #toast {
-    position:absolute; left:50%; top:20%; transform:translateX(-50%);
+  #toast { position:absolute; left:50%; top:20%; transform:translateX(-50%);
     background:rgba(10,14,17,.82); border:1px solid rgba(255,216,115,.4);
     color:#ffd873; font-size:17px; font-weight:bold; padding:12px 30px; border-radius:8px;
-    opacity:0; transition:opacity .4s; text-align:center; max-width:80%;
-  }
+    opacity:0; transition:opacity .4s; text-align:center; max-width:80%; }
   #toast.show { opacity:1; }
   #toast .small { display:block; font-size:12.5px; font-weight:normal; color:#cfd9de; margin-top:4px; }
+  #damageFlash { position:fixed; inset:0; background:radial-gradient(ellipse at center, transparent 55%, rgba(180,0,0,.5));
+    opacity:0; pointer-events:none; z-index:15; transition:opacity .25s; }
+  #drunkOverlay { position:fixed; inset:0; pointer-events:none; z-index:14;
+    background:radial-gradient(ellipse at center, transparent 40%, rgba(120,80,20,.35));
+    opacity:0; transition:opacity 1.2s; }
 
-  #damageFlash { position:fixed; inset:0; background:radial-gradient(ellipse at center, transparent 55%, rgba(180,0,0,.5)); opacity:0; pointer-events:none; z-index:15; }
-
-  #pause {
-    position:fixed; inset:0; z-index:40; background:rgba(5,8,10,.72);
-    display:none; align-items:center; justify-content:center; color:#e8e4d8; text-align:center; backdrop-filter:blur(4px);
+  /* ================= TOP BUTTONS / WALLET ================= */
+  #topBtns { position:fixed; right:16px; top:16px; z-index:30; display:flex; gap:8px; pointer-events:auto; }
+  #topBtns button {
+    background:rgba(12,16,20,.72); border:1px solid rgba(255,216,115,.45); color:#ffd873;
+    font-family:inherit; font-size:11.5px; font-weight:bold; letter-spacing:1.5px;
+    padding:8px 13px; border-radius:6px; cursor:pointer; backdrop-filter:blur(3px);
   }
+  #topBtns button:hover { background:rgba(217,165,66,.28); }
+  #topBtns button.on { background:#d9a542; color:#241b06; }
+  #wallet { position:fixed; right:16px; top:52px; z-index:29; color:#e8e4d8; font-size:12px;
+    background:rgba(12,16,20,.65); border:1px solid rgba(255,255,255,.12);
+    padding:6px 12px; border-radius:6px; letter-spacing:1px; }
+  #wallet b { color:#ffd873; }
+
+  /* ================= SPECIAL PANEL ================= */
+  #specialPanel, #shopPanel {
+    position:fixed; z-index:45; right:16px; top:90px; width:262px;
+    background:linear-gradient(180deg, rgba(18,24,20,.97), rgba(10,14,11,.97));
+    border:1px solid rgba(217,165,66,.5); border-radius:10px; padding:14px;
+    color:#e8e4d8; display:none; box-shadow:0 12px 40px rgba(0,0,0,.6);
+  }
+  #specialPanel.show, #shopPanel.show { display:block; }
+  #specialPanel h3, #shopPanel h3 { font-size:12px; letter-spacing:4px; color:#ffd873;
+    border-bottom:1px solid rgba(255,255,255,.12); padding-bottom:8px; margin-bottom:10px; }
+  .spRow { display:flex; justify-content:space-between; font-size:13px; color:#cfd9de; margin:8px 0 4px; }
+  .spRow b { color:#ffd873; }
+  #specialPanel button, #shopPanel button {
+    width:100%; margin:3px 0; padding:9px 10px; font-family:inherit; font-size:12.5px;
+    background:rgba(217,165,66,.14); border:1px solid rgba(217,165,66,.45); color:#f0e6cd;
+    border-radius:6px; cursor:pointer; text-align:left; letter-spacing:.5px;
+  }
+  #specialPanel button:hover, #shopPanel button:hover { background:rgba(217,165,66,.3); }
+  #specialPanel button:disabled, #shopPanel button:disabled { opacity:.38; cursor:not-allowed; }
+  #specialPanel .spClose, #shopPanel .spClose {
+    margin-top:10px; text-align:center; background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.2);
+  }
+  .spHint { font-size:10.5px; color:#87927f; letter-spacing:.5px; margin-top:7px; line-height:1.6; }
+  #shopPanel { top:90px; right:auto; left:50%; transform:translateX(-50%); width:300px; }
+  #shopPanel .money { font-size:12px; color:#a8b3a0; margin-bottom:8px; }
+
+  #swearBubble {
+    position:fixed; left:50%; top:28%; transform:translateX(-50%) scale(.9);
+    background:rgba(255,255,255,.95); color:#1a1a1a; font-weight:bold; font-size:22px;
+    padding:10px 22px; border-radius:18px; border:3px solid #222; z-index:38;
+    opacity:0; transition:all .18s; pointer-events:none; white-space:nowrap;
+  }
+  #swearBubble.show { opacity:1; transform:translateX(-50%) scale(1); }
+  #swearBubble::after { content:""; position:absolute; left:30px; bottom:-13px;
+    border:7px solid transparent; border-top-color:#222; }
+
+  /* ================= PAUSE / MENU ================= */
+  #pause { position:fixed; inset:0; z-index:40; background:rgba(5,8,10,.78);
+    display:none; align-items:center; justify-content:center; color:#e8e4d8; text-align:center; backdrop-filter:blur(5px); }
   #pause.show { display:flex; }
-  #pause h2 { font-size:34px; margin-bottom:12px; }
-  #pause p { color:#9fb0ba; font-size:14px; line-height:2; }
+  .pauseCard { width:340px; padding:22px; border:1px solid rgba(255,216,115,.3);
+    background:rgba(12,18,14,.92); border-radius:10px; }
+  #pause h2 { font-size:26px; letter-spacing:3px; margin-bottom:14px; }
+  #pause button {
+    width:100%; margin:6px 0; padding:12px; font-family:inherit; font-size:14px; letter-spacing:2px;
+    background:rgba(217,165,66,.14); border:1px solid rgba(217,165,66,.4); color:#f0e6cd;
+    border-radius:6px; cursor:pointer; text-transform:uppercase;
+  }
+  #pause button:hover { background:rgba(217,165,66,.32); }
+  #pause p { color:#8fa0aa; font-size:11.5px; line-height:1.9; margin-top:10px; }
 
-  /* mobile note */
-  #mobileNote { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:30;
-    color:#cfd9de; background:rgba(10,14,17,.8); border:1px solid rgba(255,255,255,.15);
-    padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
-
-  /* ---------- kontrol sentuh ---------- */
+  /* ================= TOUCH ================= */
   #touchUI { position:fixed; inset:0; z-index:25; pointer-events:none; display:none;
     font-family:"Trebuchet MS",Verdana,sans-serif; touch-action:none; }
   body.touch #touchUI { display:block; }
-  body.touch #mobileNote { display:none !important; }
 
-  #joyZone { position:absolute; left:0; bottom:0; width:46%; height:58%;
-    pointer-events:auto; touch-action:none; }
-  #joyBase {
-    position:absolute; left:26px; bottom:calc(26px + env(safe-area-inset-bottom));
+  #joyZone { position:absolute; left:0; bottom:0; width:46%; height:58%; pointer-events:auto; touch-action:none; }
+  #joyBase { position:absolute; left:26px; bottom:calc(26px + env(safe-area-inset-bottom));
     width:124px; height:124px; border-radius:50%;
-    background:rgba(12,16,20,.38); border:2px solid rgba(255,255,255,.28);
-    backdrop-filter:blur(2px);
-  }
+    background:rgba(12,16,20,.38); border:2px solid rgba(255,255,255,.28); backdrop-filter:blur(2px); }
   #joyBase::after { content:""; position:absolute; inset:34px; border-radius:50%;
     border:2px dashed rgba(255,255,255,.18); }
   #joyKnob { position:absolute; left:41px; top:41px; width:42px; height:42px; border-radius:50%;
     background:rgba(255,216,115,.85); box-shadow:0 2px 10px rgba(0,0,0,.5); }
 
-  .tbtn {
-    position:absolute; pointer-events:auto; touch-action:none;
+  .tbtn { position:absolute; pointer-events:auto; touch-action:none;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     width:58px; height:58px; border-radius:14px;
     background:rgba(12,16,20,.5); border:2px solid rgba(255,255,255,.3);
     color:#f3ead2; font-size:17px; font-weight:bold; text-align:center;
-    user-select:none; -webkit-user-select:none; backdrop-filter:blur(2px);
-  }
+    user-select:none; -webkit-user-select:none; backdrop-filter:blur(2px); }
   .tbtn span { font-size:8.5px; font-weight:normal; color:#9fb0ba; letter-spacing:1px; margin-top:1px; }
   .tbtn.big { width:74px; height:74px; border-radius:50%; font-size:15px; }
   .tbtn:active, .tbtn.on { background:rgba(217,165,66,.75); color:#241b06; border-color:#ffd873; }
@@ -160,19 +238,26 @@
   #btnBrake{ right:calc(112px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); }
   #btnHB   { right:calc(24px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); width:64px; height:64px; }
   #btnHB span { font-size:9px; }
-
   #steerBtns { display:none; }
   body.play-drive #steerBtns { display:flex; }
   #steerBtns { position:absolute; left:14px; bottom:calc(18px + env(safe-area-inset-bottom)); gap:14px; }
   #btnL, #btnR { position:static; width:86px; height:86px; font-size:30px; }
 
-  /* HUD mengecil di ponsel */
   @media (max-width:820px) {
-    #tasks { width:180px; font-size:11px; padding:7px 9px; }
-    #dash { width:170px; height:106px; right:10px; bottom:auto; top:10px; }
+    .mmLogo h1 { font-size:52px; letter-spacing:3px; }
+    .mmLogo .line { width:260px; }
+    .mmMenu { width:280px; }
+    .mmItem { font-size:15px; padding:11px 16px; }
+    .mmOffice { font-size:10px; }
+    #tasks { width:172px; font-size:10.5px; padding:7px 9px; left:10px; top:10px; }
+    #dash { width:170px; height:106px; right:10px; bottom:auto; top:78px; }
     #gaugeCanvas { width:170px; height:106px; }
-    #handItem { right:10px; top:128px; font-size:11px; padding:6px 10px; }
-    .startCard h1 { font-size:42px; }
+    #handItem { right:10px; top:210px; font-size:10.5px; padding:5px 9px; }
+    #topBtns { right:10px; top:10px; }
+    #topBtns button { font-size:10px; padding:7px 9px; letter-spacing:1px; }
+    #wallet { right:10px; top:44px; font-size:10.5px; }
+    #specialPanel { width:230px; top:76px; right:10px; }
+    #shopPanel { width:280px; }
     .startCard .keys { display:none; }
   }
 </style>
@@ -188,18 +273,47 @@
   <div id="dash"><canvas id="gaugeCanvas" width="480" height="300"></canvas></div>
   <div id="toast"></div>
   <div id="damageFlash"></div>
+  <div id="drunkOverlay"></div>
 </div>
+
+<div id="topBtns">
+  <button id="btnSpecial">SPECIAL</button>
+  <button id="btnMenu">MENU</button>
+</div>
+<div id="wallet">💰 <b id="moneyVal">100</b> mk</div>
+
+<div id="specialPanel">
+  <h3>SPECIAL</h3>
+  <div class="spRow"><span>🍺 Bir di tas</span><b id="beerCount">0</b></div>
+  <button id="btnBeer">Minum bir</button>
+  <div class="spRow"><span>🚬 Rokok di tas</span><b id="cigCount">0</b></div>
+  <button id="btnSmoke">Merokok</button>
+  <div class="spRow"><span>💢 Mengumpat</span><b>AA!</b></div>
+  <button id="btnSwear">Mengumpat keras</button>
+  <div class="spHint">Rokok &amp; bir harus dibeli dulu di KAUPPA (ujung jalan timur).</div>
+  <button id="spClose" class="spClose">Tutup</button>
+</div>
+
+<div id="shopPanel">
+  <h3>KAUPPA — TOKO DESA</h3>
+  <div class="money">Uangmu: <b id="shopMoney">100</b> mk</div>
+  <button id="buyCig">Beli sebungkus rokok — 15 mk</button>
+  <button id="buyBeer">Beli bir dingin — 8 mk</button>
+  <div class="spHint">Rokok &amp; bir masuk tas. Buka panel SPECIAL untuk memakainya.</div>
+  <button id="shopClose" class="spClose">Tutup</button>
+</div>
+
+<div id="swearBubble">AA!</div>
 
 <div id="pause">
-  <div>
-    <h2>⏸ Jeda</h2>
-    <p>Klik layar untuk lanjut berkendara / berjalan<br><br>
-    <b>WASD</b> bergerak · <b>Shift</b> lari · <b>E</b> interaksi · <b>Mouse</b> lihat<br>
-    Di dalam mobil: <b>W/S</b> gas & rem · <b>A/D</b> setir · <b>Spasi</b> rem tangan · <b>F</b> keluar</p>
+  <div class="pauseCard">
+    <h2>⏸ JEDA</h2>
+    <button id="btnResume">▶ Lanjut</button>
+    <button id="btnSave">💾 Simpan Permainan</button>
+    <button id="btnToMenu">⌂ Menu Utama</button>
+    <p>WASD jalan · E interaksi · Q taruh · F keluar mobil<br>Di mobil: W/S gas &amp; rem · A/D setir · Spasi rem tangan</p>
   </div>
 </div>
-
-<div id="mobileNote">📱 Game ini dirancang untuk PC dengan mouse &amp; keyboard.</div>
 
 <div id="touchUI">
   <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
@@ -217,21 +331,51 @@
   </div>
 </div>
 
-<div id="startScreen">
-  <div class="startCard">
+<!-- ================= MAIN MENU ================= -->
+<div id="mainMenu">
+  <div class="mmLogo">
     <h1>SUVI <span>KESÄ</span></h1>
-    <div class="sub">Perajin Mobil Musim Panas · 1995 · Finlandia</div>
-    <div class="desc">
-      Musim panas dimulai. Amppa-mu hanya sisa rangka berkarat di garasi.<br>
-      Kumpulkan suku cadang, rakit mesin, isi bahan bakar, dan nyambang ke kauppa sebelum malam.
-    </div>
-    <div class="btn" id="startBtn">▶ MULAI</div>
-    <div class="keys">
-      <b>WASD</b> jalan · <b>Shift</b> lari · <b>E</b> ambil / pasang / interaksi · <b>Q</b> buang barang · <b>Mouse</b> menoleh<br>
-      Bagian mobil: blok mesin · kopling+gearbox · radiator · aki · 4 roda · kap mesin
-    </div>
-    <div id="loadingBar"><div id="loadingFill"></div></div>
+    <div class="line"></div>
+    <p>A Summer Car Story · Finland · 1995</p>
   </div>
+  <div class="mmMenu">
+    <button class="mmItem" id="mmNew">New Game <small>mulai dari nol</small></button>
+    <button class="mmItem" id="mmCont">Continue <small id="mmSaveInfo">belum ada simpanan</small></button>
+    <button class="mmItem" id="mmCredits">Credits</button>
+  </div>
+  <div class="mmOffice">
+    <b>FLORBO GLORBO GAME</b><br>
+    Game masih dalam pengembangan · dibuat dengan Three.js
+  </div>
+  <div class="mmVersion">
+    v1.0 — STILL IN DEVELOPMENT<br>
+    © 2026 florbo glorbo game
+  </div>
+  <div class="mmHint">Klik / sentuh untuk memilih · panah + enter juga bisa</div>
+</div>
+
+<div id="creditsScreen">
+  <div class="credCard">
+    <h2>SUVI <span>KESÄ</span></h2>
+    <div class="sub">A Summer Car Story · v1.0</div>
+    <div class="big">FLORBO GLORBO GAME</div>
+    <p>Game design, programming &amp; dunia prosedural<br>
+    oleh <b>florbo glorbo game</b><br><br>
+    Dibuat dengan <b>Three.js</b> · WebAudio<br>
+    Terinspirasi dari <i>My Summer Car</i><br><br>
+    Terima kasih sudah merakit Amppa 80-mu.</p>
+    <div class="dev">STILL IN DEVELOPMENT · v1.0</div><br>
+    <button class="credBtn" id="credBack">Kembali</button>
+  </div>
+</div>
+
+<div id="loadScreen">
+  <div class="loadTitle">SUVI <span>KESÄ</span></div>
+  <div class="loadSub">Finland · Summer 1995</div>
+  <div id="loadBarWrap"><div id="loadFill"></div></div>
+  <div id="loadPct">0%</div>
+  <div id="loadTip">Menyiapkan garasi...</div>
+  <div class="loadFooter">FLORBO GLORBO GAME · STILL IN DEVELOPMENT v1.0</div>
 </div>
 
 <script type="module" src="game.js"></script>

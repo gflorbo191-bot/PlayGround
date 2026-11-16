@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suvi Kesä — Perajin Mobil Musim Panas</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:100%; height:100%; overflow:hidden; background:#0b0e12; font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif; }
+  #app { position:fixed; inset:0; }
+  canvas { display:block; }
+
+  /* ---------- Loading / start screen ---------- */
+  #startScreen {
+    position:fixed; inset:0; z-index:50;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(255,214,140,.14), transparent 55%),
+      linear-gradient(180deg,#1a232c 0%,#0e141a 70%,#090d11 100%);
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity .6s; cursor:pointer;
+  }
+  #startScreen.hide { opacity:0; pointer-events:none; }
+  .startCard { text-align:center; color:#e8e4d8; max-width:640px; padding:32px; }
+  .startCard h1 {
+    font-size:64px; letter-spacing:2px; font-weight:900;
+    color:#f3ead2; text-shadow:0 3px 0 #6b4a1e, 0 6px 24px rgba(0,0,0,.6);
+  }
+  .startCard h1 span { color:#d9a542; }
+  .startCard .sub { margin-top:6px; font-size:15px; color:#b9c4c9; letter-spacing:4px; text-transform:uppercase; }
+  .startCard .desc { margin:22px 0; font-size:14px; line-height:1.7; color:#9fb0ba; }
+  .startCard .btn {
+    display:inline-block; margin-top:10px; padding:14px 46px; font-size:19px; font-weight:bold;
+    color:#1c1508; background:linear-gradient(180deg,#ffd873,#d9a542);
+    border-radius:8px; border:1px solid #8a6524; box-shadow:0 4px 18px rgba(217,165,66,.35);
+  }
+  #startScreen:hover .btn { filter:brightness(1.08); }
+  .startCard .keys { margin-top:26px; font-size:12.5px; color:#7f9099; line-height:1.9; }
+  .startCard .keys b { color:#cfd9de; background:#1d2a33; border:1px solid #3a4a54; border-radius:4px; padding:1px 7px; margin:0 2px; font-size:11.5px; }
+  #loadingBar { width:280px; height:8px; margin:18px auto 0; background:#141c22; border-radius:4px; overflow:hidden; border:1px solid #2a3742; }
+  #loadingFill { height:100%; width:0%; background:linear-gradient(90deg,#d9a542,#ffd873); transition:width .3s; }
+
+  /* ---------- HUD ---------- */
+  #hud { position:fixed; inset:0; z-index:20; pointer-events:none; opacity:0; transition:opacity .5s; }
+  #hud.show { opacity:1; }
+  #crosshair {
+    position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px;
+  }
+  #crosshair::before, #crosshair::after {
+    content:""; position:absolute; background:rgba(255,255,255,.85);
+    box-shadow:0 0 3px rgba(0,0,0,.8);
+  }
+  #crosshair::before { left:8px; top:0; width:2px; height:18px; }
+  #crosshair::after  { top:8px; left:0; height:2px; width:18px; }
+  #crosshair.hit::before, #crosshair.hit::after { background:#ffd873; }
+
+  #hint {
+    position:absolute; left:50%; top:58%; transform:translateX(-50%);
+    background:rgba(10,14,17,.78); border:1px solid rgba(255,255,255,.14);
+    color:#f3ead2; font-size:15px; padding:8px 18px; border-radius:6px;
+    backdrop-filter:blur(3px); display:none; white-space:nowrap;
+  }
+  #hint b { color:#ffd873; }
+  #hint .sub { display:block; font-size:11.5px; color:#9fb0ba; margin-top:2px; }
+
+  #handItem {
+    position:absolute; right:26px; top:24px;
+    background:rgba(10,14,17,.75); border:1px solid rgba(255,255,255,.14);
+    color:#e8e4d8; font-size:13px; padding:8px 14px; border-radius:6px; display:none;
+  }
+  #handItem b { color:#ffd873; }
+
+  #tasks {
+    position:absolute; left:22px; top:22px; width:230px;
+    background:rgba(10,14,17,.66); border:1px solid rgba(255,255,255,.12);
+    border-radius:8px; padding:10px 12px; color:#cfd9de; font-size:12.5px;
+    backdrop-filter:blur(3px);
+  }
+  #tasks h4 { font-size:11px; letter-spacing:2px; color:#8fa0aa; text-transform:uppercase; margin-bottom:7px; border-bottom:1px solid rgba(255,255,255,.1); padding-bottom:5px; }
+  #tasks .task { padding:2.5px 0; display:flex; gap:8px; align-items:center; }
+  #tasks .task .box {
+    width:11px; height:11px; border:1.5px solid #8fa0aa; border-radius:2px; flex:none; position:relative;
+  }
+  #tasks .task.done { color:#7ec97e; }
+  #tasks .task.done .box { border-color:#7ec97e; background:rgba(126,201,126,.15); }
+  #tasks .task.done .box::after {
+    content:""; position:absolute; left:2.5px; top:-1px; width:4px; height:8px;
+    border:solid #7ec97e; border-width:0 2px 2px 0; transform:rotate(42deg);
+  }
+
+  #dash {
+    position:absolute; right:20px; bottom:16px; width:240px; height:150px; display:none;
+  }
+  #gaugeCanvas { width:240px; height:150px; }
+
+  #toast {
+    position:absolute; left:50%; top:20%; transform:translateX(-50%);
+    background:rgba(10,14,17,.82); border:1px solid rgba(255,216,115,.4);
+    color:#ffd873; font-size:17px; font-weight:bold; padding:12px 30px; border-radius:8px;
+    opacity:0; transition:opacity .4s; text-align:center; max-width:80%;
+  }
+  #toast.show { opacity:1; }
+  #toast .small { display:block; font-size:12.5px; font-weight:normal; color:#cfd9de; margin-top:4px; }
+
+  #damageFlash { position:fixed; inset:0; background:radial-gradient(ellipse at center, transparent 55%, rgba(180,0,0,.5)); opacity:0; pointer-events:none; z-index:15; }
+
+  #pause {
+    position:fixed; inset:0; z-index:40; background:rgba(5,8,10,.72);
+    display:none; align-items:center; justify-content:center; color:#e8e4d8; text-align:center; backdrop-filter:blur(4px);
+  }
+  #pause.show { display:flex; }
+  #pause h2 { font-size:34px; margin-bottom:12px; }
+  #pause p { color:#9fb0ba; font-size:14px; line-height:2; }
+
+  /* mobile note */
+  #mobileNote { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:30;
+    color:#cfd9de; background:rgba(10,14,17,.8); border:1px solid rgba(255,255,255,.15);
+    padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div id="crosshair"></div>
+  <div id="hint"></div>
+  <div id="handItem"></div>
+  <div id="tasks"><h4>Daftar Tugas</h4><div id="taskList"></div></div>
+  <div id="dash"><canvas id="gaugeCanvas" width="480" height="300"></canvas></div>
+  <div id="toast"></div>
+  <div id="damageFlash"></div>
+</div>
+
+<div id="pause">
+  <div>
+    <h2>⏸ Jeda</h2>
+    <p>Klik layar untuk lanjut berkendara / berjalan<br><br>
+    <b>WASD</b> bergerak · <b>Shift</b> lari · <b>E</b> interaksi · <b>Mouse</b> lihat<br>
+    Di dalam mobil: <b>W/S</b> gas & rem · <b>A/D</b> setir · <b>Spasi</b> rem tangan · <b>F</b> keluar</p>
+  </div>
+</div>
+
+<div id="mobileNote">📱 Game ini dirancang untuk PC dengan mouse &amp; keyboard.</div>
+
+<div id="startScreen">
+  <div class="startCard">
+    <h1>SUVI <span>KESÄ</span></h1>
+    <div class="sub">Perajin Mobil Musim Panas · 1995 · Finlandia</div>
+    <div class="desc">
+      Musim panas dimulai. Amppa-mu hanya sisa rangka berkarat di garasi.<br>
+      Kumpulkan suku cadang, rakit mesin, isi bahan bakar, dan nyambang ke kauppa sebelum malam.
+    </div>
+    <div class="btn" id="startBtn">▶ MULAI</div>
+    <div class="keys">
+      <b>WASD</b> jalan · <b>Shift</b> lari · <b>E</b> ambil / pasang / interaksi · <b>Q</b> buang barang · <b>Mouse</b> menoleh<br>
+      Bagian mobil: blok mesin · kopling+gearbox · radiator · aki · 4 roda · kap mesin
+    </div>
+    <div id="loadingBar"><div id="loadingFill"></div></div>
+  </div>
+</div>
+
+<script type="module" src="game.js"></script>
+</body>
+</html>

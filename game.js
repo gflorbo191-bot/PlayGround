@@ -697,10 +697,101 @@ addEventListener('keydown', e=>{
 });
 addEventListener('keyup', e=>{ keys[e.code]=false; });
 
+// ---------- kontrol sentuh (mobile) ----------
+const isTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0)
+  && matchMedia('(pointer:coarse)').matches;
+const touch = { gas:false, brake:false, hb:false, run:false, steer:0 };
+const joy = { active:false, fwd:0, strafe:0, id:null, ox:0, oy:0 };
+
+if (isTouch) {
+  document.body.classList.add('touch');
+  const $ = id => document.getElementById(id);
+  const bindTap = (el, fn) => {
+    el.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); fn(); }, {passive:false});
+  };
+  const bindHold = (el, on, off) => {
+    el.addEventListener('touchstart', e=>{ e.preventDefault(); e.stopPropagation(); el.classList.add('on'); on(); }, {passive:false});
+    const end = e=>{ e.preventDefault(); e.stopPropagation(); el.classList.remove('on'); off(); };
+    el.addEventListener('touchend', end, {passive:false});
+    el.addEventListener('touchcancel', end, {passive:false});
+  };
+  bindTap($('btnE'), ()=>tryInteract());
+  bindTap($('btnQ'), ()=>dropCarried());
+  bindTap($('btnRun'), ()=>{ touch.run=!touch.run; $('btnRun').classList.toggle('on', touch.run); });
+  bindHold($('btnGas'),  ()=>touch.gas=true,   ()=>touch.gas=false);
+  bindHold($('btnBrake'),()=>touch.brake=true, ()=>touch.brake=false);
+  bindHold($('btnHB'),   ()=>touch.hb=true,    ()=>touch.hb=false);
+  bindHold($('btnL'),    ()=>touch.steer=-1,   ()=>touch.steer=0);
+  bindHold($('btnR'),    ()=>touch.steer=1,    ()=>touch.steer=0);
+
+  // joystick bergerak
+  const zone=$('joyZone'), base=$('joyBase'), knob=$('joyKnob');
+  const JOY_R = 48;
+  zone.addEventListener('touchstart', e=>{
+    e.preventDefault(); e.stopPropagation();
+    if (joy.active) return;
+    const t = e.changedTouches[0];
+    joy.id = t.identifier; joy.ox = t.clientX; joy.oy = t.clientY; joy.active = true;
+    base.style.left = (t.clientX - 62) + 'px';
+    base.style.bottom = 'auto'; base.style.top = (t.clientY - 62) + 'px';
+    knob.style.left = '41px'; knob.style.top = '41px';
+  }, {passive:false});
+  zone.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    for (const t of e.changedTouches){
+      if (t.identifier !== joy.id) continue;
+      let dx = t.clientX - joy.ox, dy = t.clientY - joy.oy;
+      const d = Math.hypot(dx,dy);
+      if (d > JOY_R){ dx = dx/d*JOY_R; dy = dy/d*JOY_R; }
+      joy.fwd = Math.max(-1, Math.min(1, -dy/JOY_R));
+      joy.strafe = Math.max(-1, Math.min(1, dx/JOY_R));
+      knob.style.left = (41+dx) + 'px'; knob.style.top = (41+dy) + 'px';
+    }
+  }, {passive:false});
+  const joyEnd = e=>{
+    for (const t of e.changedTouches){
+      if (t.identifier !== joy.id) continue;
+      joy.id=null; joy.active=false; joy.fwd=0; joy.strafe=0;
+      base.style.left='26px'; base.style.top='auto';
+      base.style.bottom='calc(26px + env(safe-area-inset-bottom))';
+      knob.style.left='41px'; knob.style.top='41px';
+    }
+  };
+  zone.addEventListener('touchend', joyEnd, {passive:false});
+  zone.addEventListener('touchcancel', joyEnd, {passive:false});
+
+  // geser layar (di luar area UI) = menoleh
+  let lookId=null, lookX=0, lookY=0;
+  renderer.domElement.addEventListener('touchstart', e=>{
+    e.preventDefault();
+    if (lookId!==null) return;
+    const t = e.changedTouches[0];
+    lookId = t.identifier; lookX = t.clientX; lookY = t.clientY;
+  }, {passive:false});
+  renderer.domElement.addEventListener('touchmove', e=>{
+    e.preventDefault();
+    for (const t of e.changedTouches){
+      if (t.identifier !== lookId) continue;
+      const dx = t.clientX-lookX, dy = t.clientY-lookY;
+      lookX = t.clientX; lookY = t.clientY;
+      if (driving){
+        carLook.yaw = Math.max(-2.6, Math.min(2.6, carLook.yaw - dx*.004));
+        carLook.pitch = Math.max(-.9, Math.min(.9, carLook.pitch - dy*.004));
+      } else {
+        player.yaw -= dx*.0045;
+        player.pitch = Math.max(-1.45, Math.min(1.45, player.pitch - dy*.0045));
+      }
+    }
+  }, {passive:false});
+  const lookEnd = e=>{ for (const t of e.changedTouches) if (t.identifier===lookId) lookId=null; };
+  renderer.domElement.addEventListener('touchend', lookEnd, {passive:false});
+  renderer.domElement.addEventListener('touchcancel', lookEnd, {passive:false});
+}
+
 let hadLock=false, started=false;
 const pauseEl = document.getElementById('pause');
 renderer.domElement.addEventListener('click', ()=>{
-  if (!started) return;
+  if (!started || isTouch) return;
   tryLock();
 });
 function tryLock(){
@@ -712,7 +803,7 @@ function tryLock(){
 document.addEventListener('pointerlockchange', ()=>{
   const locked = document.pointerLockElement === renderer.domElement;
   if (locked) hadLock = true;
-  pauseEl.classList.toggle('show', started && hadLock && !locked);
+  pauseEl.classList.toggle('show', started && !isTouch && hadLock && !locked);
 });
 addEventListener('mousemove', e=>{
   if (document.pointerLockElement !== renderer.domElement) return;
@@ -750,9 +841,9 @@ function collideCircle(p, r){
   }
 }
 function updatePlayer(dt){
-  const sp = (keys['ShiftLeft']||keys['ShiftRight']) ? 7.2 : 4.4;
-  const fw = (keys['KeyW']?1:0) - (keys['KeyS']?1:0);
-  const sd = (keys['KeyD']?1:0) - (keys['KeyA']?1:0);
+  const sp = (keys['ShiftLeft']||keys['ShiftRight']||touch.run) ? 7.2 : 4.4;
+  const fw = Math.max(-1, Math.min(1, (keys['KeyW']?1:0) - (keys['KeyS']?1:0) + joy.fwd));
+  const sd = Math.max(-1, Math.min(1, (keys['KeyD']?1:0) - (keys['KeyA']?1:0) + joy.strafe));
   const moving = fw||sd;
   if (moving){
     const sin=Math.sin(player.yaw), cos=Math.cos(player.yaw);
@@ -789,6 +880,7 @@ function enterCar(){
   driving = true; carLook.yaw=0; carLook.pitch=0; car.v=0;
   camera.position.set(-.4,1.42,-.62); camera.rotation.set(0,Math.PI,0);
   carGroup.add(camera);
+  document.body.classList.add('play-drive');
   document.getElementById('dash').style.display='block';
 }
 function exitCar(){
@@ -797,6 +889,7 @@ function exitCar(){
   car.v = 0; driving=false; car.engineOn=false;
   carGroup.remove(camera);
   scene.add(camera);
+  document.body.classList.remove('play-drive');
   const side = Math.PI/2;
   player.x = car.x + Math.sin(car.rot+side)*1.6;
   player.z = car.z + Math.cos(car.rot+side)*1.6;
@@ -820,8 +913,9 @@ function toggleIgnition(){
   });
 }
 function updateCar(dt){
-  const thr = keys['KeyW']?1:0, brk = keys['KeyS']?1:0;
-  const steerIn = (keys['KeyA']?1:0) - (keys['KeyD']?1:0);
+  const thr = (keys['KeyW']||touch.gas)?1:0, brk = (keys['KeyS']||touch.brake)?1:0;
+  const steerIn = (keys['KeyA']?1:0) - (keys['KeyD']?1:0)
+    + (isTouch ? Math.abs(joy.strafe)>.15 ? joy.strafe : touch.steer : 0);
   if (car.engineOn){
     if (thr) car.v += 7.5*dt * (car.v<0?1.6:1);
     if (brk){
@@ -833,7 +927,7 @@ function updateCar(dt){
     if (car.fuel <= 0){ car.fuel=0; car.engineOn=false; showToast('Bensin habis!','Hanya jalan kaki pulang...'); }
   }
   if (!thr && !brk) car.v *= (1 - 1.1*dt);
-  if (keys['Space']) car.v *= (1 - 3.5*dt);
+  if (keys['Space'] || touch.hb) car.v *= (1 - 3.5*dt);
   if (!car.engineOn && Math.abs(car.v)<.05) car.v = 0;
   const steerTarget = steerIn * .58 / (1 + Math.abs(car.v)*.06);
   car.steer += (steerTarget - car.steer) * Math.min(1, 8*dt);
@@ -1261,9 +1355,10 @@ function startGame(){
   initAudio();
   startScreen.classList.add('hide');
   document.getElementById('hud').classList.add('show');
-  tryLock();
-  if (('ontouchstart' in window) && !Q.has('dev')) document.getElementById('mobileNote').style.display='block';
-  showToast('Selamat datang di Finlandia', 'Kunci ada di papan dinding garasi — mulai rakit!');
+  if (!isTouch) tryLock();
+  showToast(isTouch ? '📱 Mode sentuh aktif' : 'Selamat datang di Finlandia',
+    isTouch ? 'Joystick kiri jalan · geser layar menoleh · tombol E untuk aksi'
+            : 'Kunci ada di papan dinding garasi — mulai rakit!');
 }
 
 // dev auto-build

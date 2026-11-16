@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Suvi Kesä — Perajin Mobil Musim Panas</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
@@ -115,6 +115,66 @@
   #mobileNote { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); z-index:30;
     color:#cfd9de; background:rgba(10,14,17,.8); border:1px solid rgba(255,255,255,.15);
     padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
+
+  /* ---------- kontrol sentuh ---------- */
+  #touchUI { position:fixed; inset:0; z-index:25; pointer-events:none; display:none;
+    font-family:"Trebuchet MS",Verdana,sans-serif; touch-action:none; }
+  body.touch #touchUI { display:block; }
+  body.touch #mobileNote { display:none !important; }
+
+  #joyZone { position:absolute; left:0; bottom:0; width:46%; height:58%;
+    pointer-events:auto; touch-action:none; }
+  #joyBase {
+    position:absolute; left:26px; bottom:calc(26px + env(safe-area-inset-bottom));
+    width:124px; height:124px; border-radius:50%;
+    background:rgba(12,16,20,.38); border:2px solid rgba(255,255,255,.28);
+    backdrop-filter:blur(2px);
+  }
+  #joyBase::after { content:""; position:absolute; inset:34px; border-radius:50%;
+    border:2px dashed rgba(255,255,255,.18); }
+  #joyKnob { position:absolute; left:41px; top:41px; width:42px; height:42px; border-radius:50%;
+    background:rgba(255,216,115,.85); box-shadow:0 2px 10px rgba(0,0,0,.5); }
+
+  .tbtn {
+    position:absolute; pointer-events:auto; touch-action:none;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    width:58px; height:58px; border-radius:14px;
+    background:rgba(12,16,20,.5); border:2px solid rgba(255,255,255,.3);
+    color:#f3ead2; font-size:17px; font-weight:bold; text-align:center;
+    user-select:none; -webkit-user-select:none; backdrop-filter:blur(2px);
+  }
+  .tbtn span { font-size:8.5px; font-weight:normal; color:#9fb0ba; letter-spacing:1px; margin-top:1px; }
+  .tbtn.big { width:74px; height:74px; border-radius:50%; font-size:15px; }
+  .tbtn:active, .tbtn.on { background:rgba(217,165,66,.75); color:#241b06; border-color:#ffd873; }
+  .tbtn:active span, .tbtn.on span { color:#241b06; }
+
+  #btnE  { right:calc(24px + env(safe-area-inset-right)); bottom:calc(172px + env(safe-area-inset-bottom)); }
+  #btnQ  { right:calc(104px + env(safe-area-inset-right)); bottom:calc(120px + env(safe-area-inset-bottom)); }
+  #btnRun{ right:calc(24px + env(safe-area-inset-right)); bottom:calc(100px + env(safe-area-inset-bottom)); }
+  body.play-drive #btnQ, body.play-drive #btnRun { display:none; }
+  body.play-drive #btnE { bottom:calc(112px + env(safe-area-inset-bottom)); right:calc(112px + env(safe-area-inset-right)); width:64px; height:64px; }
+
+  #driveBtns { display:none; }
+  body.play-drive #driveBtns { display:block; }
+  #btnGas  { right:calc(24px + env(safe-area-inset-right)); bottom:calc(112px + env(safe-area-inset-bottom)); }
+  #btnBrake{ right:calc(112px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); }
+  #btnHB   { right:calc(24px + env(safe-area-inset-right)); bottom:calc(24px + env(safe-area-inset-bottom)); width:64px; height:64px; }
+  #btnHB span { font-size:9px; }
+
+  #steerBtns { display:none; }
+  body.play-drive #steerBtns { display:flex; }
+  #steerBtns { position:absolute; left:14px; bottom:calc(18px + env(safe-area-inset-bottom)); gap:14px; }
+  #btnL, #btnR { position:static; width:86px; height:86px; font-size:30px; }
+
+  /* HUD mengecil di ponsel */
+  @media (max-width:820px) {
+    #tasks { width:180px; font-size:11px; padding:7px 9px; }
+    #dash { width:170px; height:106px; right:10px; bottom:auto; top:10px; }
+    #gaugeCanvas { width:170px; height:106px; }
+    #handItem { right:10px; top:128px; font-size:11px; padding:6px 10px; }
+    .startCard h1 { font-size:42px; }
+    .startCard .keys { display:none; }
+  }
 </style>
 </head>
 <body>
@@ -140,6 +200,22 @@
 </div>
 
 <div id="mobileNote">📱 Game ini dirancang untuk PC dengan mouse &amp; keyboard.</div>
+
+<div id="touchUI">
+  <div id="joyZone"><div id="joyBase"><div id="joyKnob"></div></div></div>
+  <div id="btnE" class="tbtn big">E<span>AKSI</span></div>
+  <div id="btnQ" class="tbtn">Q<span>TARUH</span></div>
+  <div id="btnRun" class="tbtn">🏃<span>LARI</span></div>
+  <div id="driveBtns">
+    <div id="btnGas" class="tbtn big">GAS</div>
+    <div id="btnBrake" class="tbtn big">REM</div>
+    <div id="btnHB" class="tbtn">⌀<span>REM TANGAN</span></div>
+  </div>
+  <div id="steerBtns">
+    <div id="btnL" class="tbtn big">◀</div>
+    <div id="btnR" class="tbtn big">▶</div>
+  </div>
+</div>
 
 <div id="startScreen">
   <div class="startCard">
